@@ -10,8 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- HTML2PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -53,7 +51,7 @@
 <!-- Loading Overlay -->
 <div id="loading" class="fixed inset-0 bg-black/80 z-[100] hidden flex flex-col items-center justify-center text-white backdrop-blur">
     <div class="w-16 h-16 border-4 border-white/30 border-t-rose-500 rounded-full animate-spin mb-4"></div>
-    <h2 class="text-xl font-bold">กำลังประมวลผล...</h2>
+    <h2 class="text-xl font-bold">กำลังบันทึกข้อมูล...</h2>
 </div>
 
 <!-- Mobile Toggle -->
@@ -76,9 +74,7 @@
         <div class="nav-link" onclick="switchTab(8)" id="link-8"><i class="ph-bold ph-star"></i> 8. มาตรฐาน</div>
     </nav>
     <div class="p-4 mt-auto border-t space-y-2">
-        <button type="button" onclick="saveDraft()" class="w-full mb-2 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg shadow-sm font-bold transition flex justify-center items-center gap-2"><i class="ph-bold ph-floppy-disk"></i> บันทึกแบบร่าง</button>
-        <button type="button" onclick="exportPDFClient()" class="w-full mb-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg shadow-sm font-bold transition flex justify-center items-center gap-2"><i class="ph-bold ph-printer"></i> พิมพ์ PDF</button>
-        <button onclick="submitData()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg shadow-md font-bold transition flex justify-center items-center gap-2"><i class="ph-bold ph-paper-plane-right"></i> ส่งข้อมูล (Simulate)</button>
+        <button onclick="submitData()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-lg shadow-md font-bold transition flex justify-center items-center gap-2 text-lg"><i class="ph-bold ph-floppy-disk"></i> บันทึกข้อมูล</button>
     </div>
 </aside>
 
@@ -196,26 +192,21 @@
 </main>
 
 <script>
-    // --- Navigation ---
     function showTab(n){ document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(e=>e.classList.remove('active')); document.getElementById('tab-'+n).classList.add('active'); document.getElementById('link-'+n).classList.add('active'); }
     function switchTab(n){ showTab(n); }
-    
-    // --- Image Preview ---
     function preview(i,pid,hid){ if(i.files[0]){ const r=new FileReader(); r.onload=e=>{ if(pid){document.getElementById(pid).src=e.target.result; document.getElementById(pid).classList.remove('hidden');} document.getElementById(hid).value=e.target.result; }; r.readAsDataURL(i.files[0]); } }
     function handleImgs(i){ const c=i.closest('td'),d=c.querySelector('.d-img'),h=c.querySelector('.h-img'),a=h.value?JSON.parse(h.value):[]; Array.from(i.files).forEach(f=>{ const r=new FileReader(); r.onload=e=>{ d.innerHTML+=`<img src="${e.target.result}" class="w-16 h-16 rounded border object-cover">`; a.push(e.target.result); h.value=JSON.stringify(a); }; r.readAsDataURL(f); }); }
-    
-    // --- Table Helpers ---
     function reIndex(id){ document.querySelectorAll(`#${id} tbody tr`).forEach((r,i)=>r.querySelector('.row-index').innerText=i+1); if(id.includes('teach')) calcTeachTotal(id); if(id.includes('achieve')) calcAchieve(id); if(id.includes('attr') || id.includes('read')) calcEvalTotal(id); }
     function del(b){ const t=b.closest('table').id; b.closest('tr').remove(); reIndex(t); }
     const rowHTML = (cells) => `<tr><td class="row-index text-center font-bold text-gray-400"></td>${cells}<td><button type="button" onclick="del(this)" class="text-red-400 hover:text-red-600 font-bold px-2 w-6">×</button></td></tr>`;
     
-    // --- Row Adders ---
+    // Adders
     function addRow(id) { let h=''; if(id=='edu-table') h=rowHTML('<td><input type="text" class="text-left"></td><td><input type="text"></td><td><input type="text"></td>'); if(id=='sp-table') h=rowHTML('<td><input type="text" class="text-left"></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="number"></td>'); if(id=='plan-table') h=rowHTML('<td><input type="text" class="w-20"></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="text"></td><td><input type="number"></td>'); if(id=='media-table-new') h=rowHTML('<td><textarea rows="1" class="text-left"></textarea></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="number"></td>'); if(id=='inter-table') h=rowHTML('<td><textarea rows="1" class="text-left"></textarea></td><td><input type="number"></td>'); if(id=='res-table') h=rowHTML('<td><textarea rows="1" class="text-left"></textarea></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="text"></td>'); if(id=='learning-resources-table') h=rowHTML('<td><textarea rows="1" class="text-left"></textarea></td><td><input type="number"></td><td><textarea rows="1" class="text-left"></textarea></td>'); if(id=='self-dev-table') h=rowHTML('<td><input type="text" placeholder="ว/ด/ป" class="w-24"></td><td><textarea rows="2" class="text-left"></textarea></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="number" class="dev-hr" oninput="calcDevTotal()"></td><td class="p-1"><label class="cursor-pointer bg-gray-100 text-xs px-2 py-1 rounded">+<input type="file" class="hidden" multiple accept="image/*" onchange="handleImgs(this)"></label><div class="d-img flex flex-wrap gap-1 mt-1 justify-center"></div><textarea class="h-img hidden"></textarea></td>'); if(id=='student-award-table') h=rowHTML('<td><textarea rows="2" class="text-left" placeholder="ชื่อสกุล"></textarea></td><td><select class="k-select"><option>ระดับชาติ</option><option>ระดับภาค</option><option>ระดับจังหวัด</option><option>ระดับเขตพื้นที่</option></select></td><td><textarea rows="1" class="text-left"></textarea></td><td><textarea rows="1" class="text-left"></textarea></td><td class="p-1"><label class="cursor-pointer bg-gray-100 text-xs px-2 py-1 rounded">+<input type="file" class="hidden" multiple accept="image/*" onchange="handleImgs(this)"></label><div class="d-img flex flex-wrap gap-1 mt-1 justify-center"></div><textarea class="h-img hidden"></textarea></td>'); if(id=='teacher-award-table') h=rowHTML('<td><select class="k-select"><option>ระดับชาติ</option><option>ระดับภาค</option><option>ระดับจังหวัด</option><option>ระดับเขตพื้นที่</option></select></td><td><textarea rows="1" class="text-left"></textarea></td><td><textarea rows="1" class="text-left"></textarea></td><td class="p-1"><label class="cursor-pointer bg-gray-100 text-xs px-2 py-1 rounded">+<input type="file" class="hidden" multiple accept="image/*" onchange="handleImgs(this)"></label><div class="d-img flex flex-wrap gap-1 mt-1 justify-center"></div><textarea class="h-img hidden"></textarea></td>'); document.querySelector(`#${id} tbody`).insertAdjacentHTML('beforeend', h); reIndex(id); }
     function addTeachRow(id){ document.querySelector(`#${id} tbody`).insertAdjacentHTML('beforeend', rowHTML('<td><input type="text" class="w-24"></td><td><textarea rows="1" class="text-left"></textarea></td><td><input type="text"></td><td><input type="number" class="t-room" oninput="calcTeachTotal(\''+id+'\')"></td><td><input type="number" class="t-hr" oninput="calcTeachTotal(\''+id+'\')"></td><td><input type="number" class="t-sp" oninput="calcTeachTotal(\''+id+'\')"></td>')); reIndex(id); }
     function addActRow(id){ document.querySelector(`#${id} tbody`).insertAdjacentHTML('beforeend', rowHTML('<td><textarea rows="1" class="text-left"></textarea></td><td><input type="text" class="w-16"></td><td><input type="number" readonly class="bg-gray-100 font-bold"></td><td><input type="number" oninput="calcActTotal(this)"></td><td><input type="number" oninput="calcActTotal(this)"></td>')); reIndex(id); }
     function addSpRow(){ addRow('sp-table'); } function addPlanRow(){ addRow('plan-table'); } function addMediaRow(){ addRow('media-table-new'); } function addIntegRow(){ addRow('inter-table'); } function addResRow(){ addRow('res-table'); } function addResourceRow(){ addRow('learning-resources-table'); } function addDevRow(){ addRow('self-dev-table'); } function addAwardRow(id,hasN){ addRow(id); }
 
-    // --- Calculations ---
+    // Calcs
     function calcAge(d,m,y) { if(!d||!m||!y) return; const now = new Date(); const birth = new Date(y-543, m-1, d); let years = now.getFullYear() - birth.getFullYear(); let months = now.getMonth() - birth.getMonth(); if (now.getDate() < birth.getDate()) months--; if (months < 0) { years--; months += 12; } document.getElementById('age_display').value = years + " ปี " + months + " เดือน"; }
     function calcService(d,m,y) { if(!d||!m||!y) return; const now = new Date(); const start = new Date(y-543, m-1, d); let years = now.getFullYear() - start.getFullYear(); let months = now.getMonth() - start.getMonth(); if (now.getDate() < start.getDate()) months--; if (months < 0) { years--; months += 12; } document.getElementById('service_display').value = years + " ปี " + months + " เดือน"; }
     function calcTeachTotal(id) { let r=0, h=0, s=0; document.querySelectorAll(`#${id} tbody tr`).forEach(row => { r += Number(row.querySelector('.t-room')?.value || 0); h += Number(row.querySelector('.t-hr')?.value || 0); s += Number(row.querySelector('.t-sp')?.value || 0); }); const prefix = id === 'teach-t1' ? 't1' : 't2'; document.getElementById(`${prefix}-room-total`).innerText = r; document.getElementById(`${prefix}-hr-total`).innerText = h; document.getElementById(`${prefix}-sp-total`).innerText = s; }
@@ -244,8 +235,6 @@
         if(Number(pct3) >= target) { resEl.innerText = "บรรลุ"; resEl.className="font-bold px-2 py-1 rounded text-white text-xs bg-green-500"; } else { resEl.innerText = "ไม่บรรลุ"; resEl.className="font-bold px-2 py-1 rounded text-white text-xs bg-red-500"; }
         updateChart(id.includes('t1')?1:2, totals);
     }
-    
-    // --- Charts ---
     let charts={};
     function updateChart(n, t){
         const ctx=document.getElementById('chart'+n); if(charts[n]) charts[n].destroy();
@@ -253,7 +242,6 @@
         setTimeout(()=>{ document.getElementById(`ach${n}_chart`).value = charts[n].toBase64Image(); }, 500);
     }
 
-    // --- Evaluations ---
     function createEvalTable(id, title) { return `<div class="border rounded-lg p-3 bg-gray-50"><h5 class="font-bold text-gray-700 mb-2">${title}</h5><div class="overflow-x-auto border rounded-lg bg-white"><table class="w-full k-table text-xs" id="${id}"><thead><tr><th class="w-8">ที่</th><th class="min-w-subject">รายวิชา</th><th class="w-20">ห้อง</th><th class="w-20">รวม</th><th class="w-eval-col">3 (ดีเยี่ยม)</th><th class="w-eval-col">2 (ดี)</th><th class="w-eval-col">1 (ผ่าน)</th><th class="w-eval-col">0 (ไม่ผ่าน)</th><th class="w-6"></th></tr></thead><tbody></tbody><tfoot class="bg-gray-100 font-bold"><tr><td colspan="3" class="text-right pr-2">รวม</td><td id="${id}-total">0</td><td id="${id}-l3">0</td><td id="${id}-l2">0</td><td id="${id}-l1">0</td><td id="${id}-l0">0</td><td></td></tr></tfoot></table></div><button type="button" onclick="addEvalRow('${id}')" class="text-xs text-rose-600 mt-1 font-bold">+ เพิ่มวิชา</button><div class="mt-2 text-xs border-t pt-2 space-y-1"><div>ผลการประเมิน (ระดับ 2 ขึ้นไป): <span id="${id}-pass-pct" class="font-bold text-blue-600">0%</span></div><div>ระดับคุณภาพ: <span id="${id}-qual" class="font-bold px-2 py-0.5 rounded text-white bg-gray-400">-</span></div></div></div>`; }
     function addEvalRow(id){ document.querySelector(`#${id} tbody`).insertAdjacentHTML('beforeend', `<tr><td class="row-index text-center"></td><td><textarea rows="1" class="text-left w-full"></textarea></td><td><input type="text"></td><td><input type="number" readonly class="bg-gray-100 font-bold"></td>${[3,2,1,0].map(x=>`<td><input type="number" oninput="calcEvalTotal('${id}')"></td>`).join('')}<td><button onclick="del(this)" class="text-red-400">x</button></td></tr>`); reIndex(id); }
     function calcEvalTotal(id) {
@@ -266,8 +254,6 @@
         if(pp >= 90) { qual = "ยอดเยี่ยม"; color = "bg-purple-600"; } else if(pp >= 80) { qual = "ดีเลิศ"; color = "bg-green-600"; } else if(pp >= 70) { qual = "ดี"; color = "bg-blue-600"; } else if(pp >= 60) { qual = "ปานกลาง"; color = "bg-yellow-500"; } else { qual = "กำลังพัฒนา"; color = "bg-red-500"; }
         const qEl = document.getElementById(`${id}-qual`); qEl.innerText = qual; qEl.className = `font-bold px-2 py-0.5 rounded text-white ${color}`;
     }
-
-    // --- Init ---
     function createThaiDateSelectors(hid, cid, callback){ const el=document.getElementById(cid); if(!el) return; el.innerHTML=`<select class="k-select w-24 d"><option value="">วัน</option>${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select><select class="k-select w-32 m"><option value="">เดือน</option>${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'].map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}</select><select class="k-select w-28 y"><option value="">พ.ศ.</option>${Array.from({length:60},(_,i)=>`<option>${new Date().getFullYear()+543-i}</option>`).join('')}</select>`; el.querySelectorAll('select').forEach(s=>s.onchange=()=>{const d=el.querySelector('.d').value,m=el.querySelector('.m').value,y=el.querySelector('.y').value; const ms=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"]; if(d&&m&&y){document.getElementById(hid).value=`${d} ${ms[parseInt(m)-1]} ${y}`; if(callback)callback(d,m,y);}}); }
     function updatePlanEval() { let t=0; document.querySelectorAll('.plan-group').forEach(g => { const c=g.querySelectorAll('input:checked').length; t+=(c===5?4:c===4?3:c===3?2:c>=1?1:0); }); document.getElementById('plan-eval-total').innerText=t; document.getElementById('plan-eval-level').innerText=t>=16?"ระดับ 4 (ดีมาก)":t>=11?"ระดับ 3 (ดี)":t>=6?"ระดับ 2 (พอใช้)":"ระดับ 1 (ปรับปรุง)"; }
     function calcStd(id) { let s=0,c=0; document.querySelectorAll(`#${id}-container input[type=number]`).forEach(i=>{if(i.value){s+=Number(i.value);c++}}); const a=c?(s/c).toFixed(2):0; document.getElementById(`${id}-score`).innerText=a; document.getElementById(`${id}-result`).innerText=a>4.5?"ยอดเยี่ยม":a>3.5?"ดีเลิศ":a>2.5?"ดี":a>1.5?"ปานกลาง":a>0?"กำลังพัฒนา":"-"; }
@@ -286,151 +272,167 @@
             if(document.getElementById('attr-t1')) { addEvalRow('attr-t1'); addEvalRow('attr-t2'); }
             if(document.getElementById('read-t1')) { addEvalRow('read-t1'); addEvalRow('read-t2'); }
             
-            // Methods Init
+            // Methods
             const methods = ["การอธิบาย","การสาธิต / ทดลอง","การใช้เกมประกอบ","สถานการณ์จำลอง","กรณีตัวอย่าง","บทบาทสมมุติ","การแก้ไขสถานการณ์","โปรแกรมสำเร็จรูป","ศูนย์การเรียน","ชุดการสอน","คอมพิวเตอร์ช่วยสอน","โครงงาน","การถามตอบ","การสืบสวนสอบสวน","กลุ่มสืบค้นความรู้","กลุ่มสัมพันธ์","การเรียนรู้แบบร่วมมือ","ความคิดรวบยอด","อริยสัจ 4","การศึกษาค้นคว้าด้วยตนเอง","การทัศนะศึกษานอกสถานที่","การเรียนรู้จากห้องสมุด","การพัฒนากระบวนการคิด","การอภิปรายกลุ่มย่อย","การแก้ปัญหา"];
             const methodContainer = document.getElementById('methods-wrap');
             if(methodContainer) methodContainer.innerHTML = methods.map((m,i)=>`<label class="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded"><input type="checkbox" name="methods" value="${m}" data-idx="${i+1}" onchange="updateMethodCount()" class="accent-rose-600 w-4 h-4"> ${m}</label>`).join('');
             
-            // Plan Eval Init
+            // Plan Eval
             const p7Data = [{t:'7.1 การวิเคราะห์ มาตรฐานฯ', i:['ระบุตัวชี้วัด/ผลการเรียนรู้','วิเคราะห์ KPA','เหมาะสม สอดคล้องกิจกรรม','สอดคล้องผลการเรียนรู้','ครอบคลุมมาตรฐาน']}, {t:'7.2 การออกแบบกิจกรรม', i:['ออกแบบเป็นขั้นตอน','ครบ 4 ด้าน','เหมาะสมกับจุดประสงค์','สอดคล้อง KPA','ปฏิบัติได้จริง']}, {t:'7.3 การออกแบบปฏิสัมพันธ์', i:['กระบวนการกลุ่ม','มีส่วนร่วมหลากหลาย','กำหนดบทบาทชัดเจน','ปฏิบัติจริง','ผู้เรียนสนุกสนาน']}, {t:'7.4 การออกแบบประเมินผล', i:['ประเมินทุกแผน','ประเมินหลากหลาย','สอดคล้องจุดประสงค์','ปฏิบัติจริง','นำผลมาพัฒนา']}, {t:'7.5 การใช้สื่ออุปกรณ์', i:['มีการใช้สื่อ','กำหนดขั้นตอนการใช้','เหมาะสมกับกิจกรรม','มีสื่ออุปกรณ์','พัฒนาสื่อ']}];
             const p7Container = document.getElementById('plan-eval-container');
             if(p7Container) p7Container.innerHTML = p7Data.map((s, idx) => `<div class="border rounded-lg p-4 bg-gray-50 plan-group" id="plan_group_${idx+1}"><h4 class="font-bold text-gray-700 mb-2">${s.t}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${s.i.map((item, subIdx) => `<label class="flex items-center gap-2"><input type="checkbox" name="plan${idx+1}_${subIdx+1}" onchange="updatePlanEval()" class="accent-rose-600 w-4 h-4"> <span class="text-sm">${item}</span></label>`).join('')}</div></div>`).join('');
             
-            // Standards Init
+            // Standards
             const stdData = [ {id:'std1', t:'มาตรฐานที่ 1 คุณภาพของผู้เรียน', sub:[ {n:'1.1 ผลสัมฤทธิ์ทางวิชาการ', i:['ความสามารถในการอ่าน เขียน สื่อสาร คิดคำนวณ','คิดวิเคราะห์ วิจารณญาณ แก้ปัญหา','สร้างนวัตกรรม','ใช้เทคโนโลยีสารสนเทศ','ผลสัมฤทธิ์ตามหลักสูตร','ความรู้ทักษะพื้นฐาน เจตคติงานอาชีพ']}, {n:'1.2 คุณลักษณะที่พึงประสงค์', i:['คุณลักษณะค่านิยมที่ดี','ภูมิใจในท้องถิ่นและความเป็นไทย','ยอมรับความแตกต่าง','สุขภาวะทางร่างกาย จิตสังคม']} ]}, {id:'std2', t:'มาตรฐานที่ 2 กระบวนการบริหารและการจัดการ', sub:[ {n:'', i:['เป้าหมายวิสัยทัศน์ชัดเจน','ระบบบริหารจัดการคุณภาพ','พัฒนาวิชาการเน้นคุณภาพผู้เรียน','พัฒนาครูให้เชี่ยวชาญ','สภาพแวดล้อมเอื้อต่อการเรียนรู้','ระบบเทคโนโลยีสารสนเทศ']} ]}, {id:'std3', t:'มาตรฐานที่ 3 กระบวนการจัดการเรียนการสอนที่เน้นผู้เรียนเป็นสำคัญ', sub:[ {n:'', i:['จัดการเรียนรู้ผ่านกระบวนการคิด','ใช้สื่อ เทคโนโลยี','บริหารจัดการชั้นเรียนเชิงบวก','ตรวจสอบและประเมินผู้เรียน','แลกเปลี่ยนเรียนรู้และสะท้อนกลับ']} ]} ];
             const stdContainer = document.getElementById('std-container');
             if(stdContainer) stdContainer.innerHTML = stdData.map(s => `<div class="border rounded-xl overflow-hidden mb-6" id="${s.id}-container"><div class="bg-gray-100 p-4 border-b flex justify-between items-center"><h3 class="font-bold text-lg text-gray-800">${s.t}</h3><div class="text-right"><div class="text-sm text-gray-500">เฉลี่ย</div><div id="${s.id}-score" class="font-bold text-xl text-rose-600">0.00</div><div id="${s.id}-result" class="text-sm font-bold text-blue-600">-</div></div></div><div class="p-4 bg-white space-y-4">${s.sub.map(sub => `${sub.n?`<h4 class="font-bold text-gray-700 bg-gray-50 p-2 rounded">${sub.n}</h4>`:''} <div class="space-y-2 pl-2">${sub.i.map(item => `<div class="flex justify-between items-center border-b border-dashed pb-1"><span class="text-sm text-gray-600 w-3/4">${item}</span><input type="number" min="1" max="5" class="border rounded w-16 text-center p-1" oninput="calcStd('${s.id}')" placeholder="1-5"></div>`).join('')}</div>`).join('')}<div class="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t"><div><label class="k-label">กระบวนการพัฒนา</label><textarea class="w-full border rounded p-2 text-sm" rows="3"></textarea></div><div><label class="k-label">ผลการพัฒนา</label><textarea class="w-full border rounded p-2 text-sm" rows="3"></textarea></div><div><label class="k-label">จุดเด่น</label><textarea class="w-full border rounded p-2 text-sm" rows="3"></textarea></div><div><label class="k-label">จุดที่ควรพัฒนา</label><textarea class="w-full border rounded p-2 text-sm" rows="3"></textarea></div></div></div></div>`).join('');
             
             const nameInput = document.querySelector('input[name="full_name"]'); if(nameInput) { nameInput.addEventListener('input', function(e) { document.getElementById('signer_name').innerText = e.target.value || '-'; }); }
             showTab(1);
-            
-            // Check Draft
-            const saved = localStorage.getItem('sar_draft');
-            if(saved) {
-                Swal.fire({
-                    title: 'พบข้อมูลแบบร่าง',
-                    text: 'ต้องการเรียกคืนข้อมูลที่บันทึกไว้ล่าสุดหรือไม่?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'เรียกคืน',
-                    cancelButtonText: 'เริ่มใหม่'
-                }).then((result) => {
-                    if (result.isConfirmed) { loadDraft(saved); }
-                });
-            }
         } catch (e) { console.error("Init Error: ", e); }
     }
-    
-    // --- Save Draft (LocalStorage) ---
-    function saveDraft() {
-        const d = {};
-        const fd = new FormData(document.getElementById('sarForm'));
-        for(let [k,v] of fd.entries()) d[k] = v;
-        
-        // Save table row counts
-        d._tables = {};
-        ['edu-table','teach-t1','teach-t2','act-t1','act-t2','sp-table','plan-table','media-table-new','inter-table','res-table','learning-resources-table','self-dev-table','student-award-table','teacher-award-table','achieve-t1','achieve-t2','attr-t1','attr-t2','read-t1','read-t2'].forEach(id => {
-             d._tables[id] = document.querySelectorAll(`#${id} tbody tr`).length;
-        });
-        
-        // Save Checkboxes
-        d._checks = [];
-        document.querySelectorAll('input[type=checkbox]:checked').forEach(cb => d._checks.push(cb.name || cb.value));
 
-        localStorage.setItem('sar_draft', JSON.stringify(d));
-        Swal.fire({ icon: 'success', title: 'บันทึกแบบร่างแล้ว', timer: 1500, showConfirmButton: false });
-    }
-    
-    // --- Load Draft ---
-    function loadDraft(jsonStr) {
-        try {
-            const d = JSON.parse(jsonStr);
-            if(d._tables) {
-                Object.keys(d._tables).forEach(id => {
-                    const count = d._tables[id];
-                    const current = document.querySelectorAll(`#${id} tbody tr`).length;
-                    for(let i=current; i<count; i++) {
-                         if(id==='edu-table') addRow('edu-table');
-                         else if(id==='teach-t1') addTeachRow('teach-t1');
-                         else if(id==='teach-t2') addTeachRow('teach-t2');
-                         else if(id==='act-t1') addActRow('act-t1');
-                         else if(id==='act-t2') addActRow('act-t2');
-                         else if(id==='sp-table') addSpRow();
-                         else if(id==='plan-table') addPlanRow();
-                         else if(id==='media-table-new') addMediaRow();
-                         else if(id==='inter-table') addIntegRow();
-                         else if(id==='res-table') addResRow();
-                         else if(id==='learning-resources-table') addResourceRow('learning-resources-table');
-                         else if(id==='self-dev-table') addDevRow();
-                         else if(id==='student-award-table') addAwardRow('student-award-table',1);
-                         else if(id==='teacher-award-table') addAwardRow('teacher-award-table',0);
-                         else if(id==='achieve-t1') addAchieveRow('achieve-t1');
-                         else if(id==='achieve-t2') addAchieveRow('achieve-t2');
-                         else if(id.includes('attr') || id.includes('read')) addEvalRow(id);
-                    }
-                });
-            }
-
-            Object.keys(d).forEach(k => {
-                if(k.startsWith('_')) return;
-                const el = document.querySelector(`[name="${k}"]`);
-                if(el) {
-                   if(el.type !== 'file') el.value = d[k];
-                   if(el.oninput) el.oninput();
-                   if(el.onchange) el.onchange();
-                }
-            });
-            
-             if(d._checks) {
-                 d._checks.forEach(val => {
-                     const cb = document.querySelector(`input[value="${val}"]`) || document.querySelector(`input[name="${val}"]`);
-                     if(cb) { cb.checked = true; if(cb.onchange) cb.onchange(); }
-                 });
-             }
-             
-             if(d.profile_pic) { document.getElementById('pf_preview').src = d.profile_pic; document.getElementById('pf_preview').classList.remove('hidden'); }
-             if(d.signature_img) { document.getElementById('sig_preview_manual').src = d.signature_img; document.getElementById('sig_preview_manual').classList.remove('hidden'); document.getElementById('sig_placeholder').style.display='none'; }
-
-        } catch(e) { console.error("Restore Error", e); }
-    }
-
-    // --- PDF Export (Client Side) ---
-    function exportPDFClient() {
-        const original = document.getElementById('sarForm');
-        const clone = original.cloneNode(true);
-        
-        // Expand Tabs
-        clone.querySelectorAll('.tab-content').forEach(el => {
-            el.style.display = 'block';
-            el.style.opacity = '1';
-            el.style.animation = 'none';
-        });
-        
-        // Remove Buttons inside clone
-        clone.querySelectorAll('button').forEach(el => el.remove());
-        
-        const wrapper = document.createElement('div');
-        wrapper.style.padding = '20px';
-        wrapper.style.width = '100%';
-        wrapper.appendChild(clone);
-        
-        html2pdf().from(wrapper).set({
-            margin: 10,
-            filename: 'SAR_Report.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).save();
-    }
-
-    // --- Submission Simulation ---
+    // Submit Data
     function submitData(){
-        Swal.fire({
-            title: 'Simulation Mode',
-            text: 'ระบบนี้เป็น GitHub Page (Static) ข้อมูลจะไม่ถูกส่งไปยัง Google Drive จริง แต่ท่านสามารถ Save Draft หรือ Export PDF ได้',
-            icon: 'info',
-            confirmButtonText: 'เข้าใจแล้ว'
+        document.getElementById('loading').style.display='flex';
+        const d={}; 
+        const fd=new FormData(document.getElementById('sarForm')); 
+        for(let [k,v] of fd.entries()) d[k]=v;
+        
+        // 1. ค่าทั่วไปที่คำนวณ
+        d.age = document.getElementById('age_display').value; 
+        d.service_year = document.getElementById('service_display').value;
+        d.dev_count = document.getElementById('dev-count').innerText;
+        // CHANGE HERE: Changed from d.dev_hours to d.total_dev_hours
+        d.total_dev_hours = document.getElementById('dev-hrs').innerText; 
+        
+        const formatMoney = (n) => n ? Number(n).toLocaleString('th-TH') : "";
+        d.salary = formatMoney(d.salary);
+        d.standing_money = formatMoney(d.standing_money);
+
+        // 2.1 ปฏิบัติการสอน (รวม)
+        d.s1_total_room = document.getElementById('t1-room-total').innerText;
+        d.s1_total_hours = document.getElementById('t1-hr-total').innerText;
+        d.s1_total_sp = document.getElementById('t1-sp-total').innerText;
+        d.s2_total_room = document.getElementById('t2-room-total').innerText;
+        d.s2_total_hours = document.getElementById('t2-hr-total').innerText;
+        d.s2_total_sp = document.getElementById('t2-sp-total').innerText;
+
+        // 3.4 วิธีสอน (Map m1-m25)
+        d.method_count = document.getElementById('method-count').innerText;
+        document.querySelectorAll('input[name="methods"]').forEach(cb => {
+            if(cb.checked) d['m' + cb.getAttribute('data-idx')] = true;
         });
+
+        // 6.1 ผลสัมฤทธิ์
+        const mapTerm = {'t1': 'a1', 't2': 'a2'};
+        ['t1','t2'].forEach(s => {
+            const a = mapTerm[s];
+            d[`${a}_sum_grades`] = document.getElementById(`${s}-total-std`).innerText;
+            
+            let sumGrades = 0;
+            ['g4','g35','g3','g25','g2','g15','g1','g0','gr','gms'].forEach(k => {
+                const val = document.getElementById(`${s}-${k}`).innerText;
+                d[`${a}_${k}`] = val;
+                sumGrades += Number(val || 0);
+            });
+            d[`${a}_sum_grade_count`] = sumGrades;
+
+            ['p4','p35','p3','p25','p2','p15','p1','p0','pr','pms'].forEach(k => d[`${a}_${k}`] = document.getElementById(`${s}-${k}`).innerText);
+            
+            d[`${a}_p_total`] = "100%"; 
+
+            const txt2 = document.getElementById(`${s}-kpi-2`).innerText; 
+            const match2 = txt2.match(/(\d+) คน \(([\d\.]+)%\)/);
+            if(match2) { d[`${a}_2up_count`] = match2[1]; d[`${a}_2up_pct`] = match2[2]; }
+            
+            const txt3 = document.getElementById(`${s}-kpi-3`).innerText;
+            const match3 = txt3.match(/(\d+) คน \(([\d\.]+)%\)/);
+            if(match3) { d[`${a}_3up_count`] = match3[1]; d[`${a}_3up_pct`] = match3[2]; }
+            
+            d[`${a}_target`] = document.getElementById(`${s}-target`).value;
+            d[`${a}_judge`] = document.getElementById(`${s}-judge`).innerText;
+            d[`${a}_chart`] = document.getElementById(`ach${s==='t1'?1:2}_chart`).value;
+        });
+
+        // 6.2 & 6.3
+        const evalMaps = [
+            {id:'attr-t1', p:'at1'}, {id:'attr-t2', p:'at2'},
+            {id:'read-t1', p:'rd1'}, {id:'read-t2', p:'rd2'}
+        ];
+        
+        evalMaps.forEach(m => {
+            const id = m.id;
+            const p = m.p;
+            d[`${p}_sum_total`] = document.getElementById(`${id}-total`).innerText;
+            d[`${p}_sum_3`] = document.getElementById(`${id}-l3`).innerText;
+            d[`${p}_sum_2`] = document.getElementById(`${id}-l2`).innerText;
+            d[`${p}_sum_1`] = document.getElementById(`${id}-l1`).innerText;
+            d[`${p}_sum_0`] = document.getElementById(`${id}-l0`).innerText;
+            d[`${p}_qual`] = document.getElementById(`${id}-qual`).innerText;
+            
+            const txt = document.getElementById(`${id}-pass-pct`).innerText;
+            const match = txt.match(/(\d+) คน \(([\d\.]+)%\)/);
+            if(match) { d[`${p}_pass_count`] = match[1]; d[`${p}_pass_pct`] = match[2]; }
+        });
+
+        // 7. ประเมินแผน
+        d.plan_eval_total = document.getElementById('plan-eval-total').innerText;
+        d.plan_eval_level = document.getElementById('plan-eval-level').innerText;
+        document.querySelectorAll('#plan-eval-container input[type=checkbox]').forEach(cb => {
+            if(cb.checked) d[cb.name] = true;
+        });
+
+        // 8. มาตรฐาน
+        ['std1','std2','std3'].forEach(id => {
+            d[`${id}_score`] = document.getElementById(`${id}-score`).innerText;
+            d[`${id}_result`] = document.getElementById(`${id}-result`).innerText;
+            const box = document.getElementById(`${id}-container`);
+            const txts = box.querySelectorAll('textarea');
+            d[`${id}_proc`] = txts[0]?.value||""; d[`${id}_res`] = txts[1]?.value||"";
+            d[`${id}_str`] = txts[2]?.value||""; d[`${id}_weak`] = txts[3]?.value||"";
+            const inputs = box.querySelectorAll('input[type=number]');
+            inputs.forEach((inp, idx) => d[`${id}_${idx+1}`] = inp.value);
+        });
+        
+        const getT = (id, keys) => { const arr=[]; document.querySelectorAll(`#${id} tbody tr`).forEach(r=>{ const o={}; const inps=Array.from(r.querySelectorAll('input:not([type=file]):not(.h-img), textarea:not(.h-img), select')); const hImg = r.querySelector('.h-img'); keys.forEach((k,i)=>{ if(k==='images') o[k]=hImg?hImg.value:""; else o[k]=inps[i]?inps[i].value:""; }); arr.push(o); }); return arr; };
+        
+        d.education = getT('edu-table',['degree','major','uni']);
+        d.schedule_1 = getT('teach-t1',['s1_code','s1_name','s1_level','s1_room','s1_hours','s1_sp']);
+        d.schedule_2 = getT('teach-t2',['s2_code','s2_name','s2_level','s2_room','s2_hours','s2_sp']);
+        d.dev_act_1 = getT('act-t1',['d1_name','d1_level','d1_total','d1_pass','d1_fail']);
+        d.dev_act_2 = getT('act-t2',['d2_name','d2_level','d2_total','d2_pass','d2_fail']);
+        d.special_tasks = getT('sp-table',['sp_group','sp_task','sp_hours']);
+        d.plans = getT('plan-table',['plan_code','plan_name','plan_level','plan_num']);
+        d.medias = getT('media-table-new',['media_name','media_subject','media_num']);
+        d.integ = getT('inter-table',['integ_name','integ_hours']);
+        d.research = getT('res-table',['res_name','res_subject','res_level']);
+        d.resources = getT('learning-resources-table',['res_source','res_stat','res_result']);
+        d.self_dev = getT('self-dev-table',['dev_date','dev_topic','dev_org','dev_hours','images']);
+        
+        d.student_awards = getT('student-award-table',['saw_name','saw_level','saw_award','saw_org','images']);
+        d.student_awards.forEach(item => item.award_name_for_app = item.saw_award);
+        d.teacher_awards = getT('teacher-award-table',['taw_level','taw_award','taw_org','images']);
+        d.teacher_awards.forEach(item => item.award_name_for_app = item.taw_award);
+
+        d.ach_1 = getT('achieve-t1',['a1_subject','a1_room','a1_total_std','4_1','3.5_1','3_1','2.5_1','2_1','1.5_1','1_1','0_1','r_1','ms_1']);
+        d.ach_2 = getT('achieve-t2',['a2_subject','a2_room','a2_total_std','4_2','3.5_2','3_2','2.5_2','2_2','1.5_2','1_2','0_2','r_2','ms_2']);
+        
+        d.attr_1 = getT('attr-t1',['at1_subject','at1_room','at1_total','at1_3','at1_2','at1_1','at1_0']);
+        d.attr_2 = getT('attr-t2',['at2_subject','at2_room','at2_total','at2_3','at2_2','at2_1','at2_0']);
+        d.read_1 = getT('read-t1',['rd1_subject','rd1_room','rd1_total','rd1_3','rd1_2','rd1_1','rd1_0']);
+        d.read_2 = getT('read-t2',['rd2_subject','rd2_room','rd2_total','rd2_3','rd2_2','rd2_1','rd2_0']);
+
+        if(typeof google!=='undefined'&&google.script){
+            google.script.run.withSuccessHandler(()=>{
+                document.getElementById('loading').style.display='none';
+                localStorage.removeItem('sar_draft'); // Clear Draft on success
+                Swal.fire('สำเร็จ','บันทึกข้อมูลเรียบร้อย','success');
+            }).withFailureHandler(e=>{
+                document.getElementById('loading').style.display='none';
+                Swal.fire('Error',e.message,'error');
+            }).saveSARData(JSON.stringify(d));
+        } else { console.log(d); setTimeout(()=>{document.getElementById('loading').style.display='none';alert('Sent (Simulation - No Google Script detected)');},1000); }
     }
 </script>
 </body>
